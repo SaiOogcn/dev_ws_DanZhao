@@ -1,0 +1,203 @@
+# Nav2 全栈参数教学骨架。
+# 这里保留节点和参数层级，删除可直接照搬的答案；学员必须结合 TF、地图和
+# 车端插件版本补全。当前文件故意不保证能启动。
+
+amcl:
+  ros__parameters:
+    use_sim_time: false
+    # TODO: 补全 base_frame_id、odom_frame_id、global_frame_id、scan_topic、
+    # 初始位姿和激光模型参数，并解释 EKF 与 AMCL 的职责边界。
+    base_frame_id: TODO_base_frame
+    odom_frame_id: TODO_odom_frame
+    global_frame_id: TODO_map_frame
+    scan_topic: TODO_scan_topic
+    set_initial_pose: false
+
+bt_navigator:
+  ros__parameters:
+    use_sim_time: false
+    global_frame: TODO_map_frame
+    robot_base_frame: TODO_base_frame
+    odom_topic: TODO_odom_topic
+    # TODO: 选择与安装版本匹配的行为树和 plugin_lib_names。
+    default_nav_to_pose_bt_xml: TODO_behavior_tree.xml
+    plugin_lib_names: []
+
+controller_server:
+  ros__parameters:
+    use_sim_time: false
+    odom_topic: TODO_odom_topic
+    controller_frequency: 0.0
+    controller_plugins: [TEB]
+    progress_checker_plugin: progress_checker
+    goal_checker_plugins: [general_goal_checker]
+    progress_checker:
+      plugin: nav2_controller::SimpleProgressChecker
+    general_goal_checker:
+      plugin: nav2_controller::SimpleGoalChecker
+    TEB:
+      # TEB 参数写在这里，不单独建文件。车端也是这个结构：launch 只把
+      # 一个 params_file 交给 nav2_bringup，controller_server 也只读这一个
+      # 文件。另建一个 TEB 的 YAML 不生效。
+      # TODO: 按车体尺寸和实测距离补齐下面所有 0.0，包括速度上限、
+      # 加速度上限、wheelbase、最小转弯半径、障碍物距离、目标容差和优化权重。
+      # 数据类型不要改，Nav2 对 TEB 参数的类型很敏感。
+      plugin: teb_local_planner::TebLocalPlannerROS
+      odom_topic: TODO_odom_topic
+      map_frame: TODO_map_frame
+
+      # Trajectory
+      teb_autosize: 1.0
+      dt_ref: 0.3
+      dt_hysteresis: 0.03
+      global_plan_overwrite_orientation: false
+      max_global_plan_lookahead_dist: 3.0
+      feasibility_check_no_poses: 5
+
+      # Robot
+      max_vel_x: 0.0
+      max_vel_y: 0.0
+      max_vel_x_backwards: 0.0
+      max_vel_theta: 0.0
+      acc_lim_x: 0.0
+      acc_lim_y: 0.0
+      acc_lim_theta: 0.0
+      max_vel_trans: 0.0
+      wheelbase: 0.0
+      min_turning_radius: 0.0
+      cmd_angle_instead_rotvel: false
+      footprint_model:
+        type: polygon
+        vertices: TODO_polygon_vertices
+      xy_goal_tolerance: 0.0
+      yaw_goal_tolerance: 0.0
+      free_goal_vel: false
+
+      # Obstacles
+      min_obstacle_dist: 0.0
+      include_costmap_obstacles: true
+      costmap_obstacles_behind_robot_dist: 3.0
+      obstacle_poses_affected: 15
+      costmap_converter_plugin: ""
+      costmap_converter_spin_thread: true
+      costmap_converter_rate: 5.0
+      include_dynamic_obstacles: true
+      dynamic_obstacle_inflation_dist: 0.0
+
+      # Optimization
+      no_inner_iterations: 5
+      no_outer_iterations: 3
+      # 设成 false 会关掉优化器，TEB 不优化轨迹。除调试外保持 true。
+      optimization_activate: true
+      optimization_verbose: false
+      penalty_epsilon: 0.15
+      obstacle_cost_exponent: 4.0
+      weight_max_vel_x: 0.0
+      weight_max_vel_theta: 0.0
+      weight_acc_lim_x: 0.0
+      weight_acc_lim_theta: 0.0
+      weight_kinematics_nh: 0.0
+      weight_kinematics_forward_drive: 0.0
+      weight_kinematics_turning_radius: 0.0
+      weight_optimaltime: 0.0
+      weight_shortest_path: 0.0
+      weight_obstacle: 0.0
+      weight_inflation: 0.0
+      weight_dynamic_obstacle: 0.0
+      weight_dynamic_obstacle_inflation: 0.0
+      weight_viapoint: 0.0
+      weight_adapt_factor: 0.0
+
+      # Homotopy Class Planner
+      enable_homotopy_class_planning: true
+      enable_multithreading: true
+      max_number_classes: 5
+      selection_cost_hysteresis: 1.0
+      selection_prefer_initial_plan: 0.95
+      selection_obst_cost_scale: 1.0
+      selection_alternative_time_cost: false
+      roadmap_graph_no_samples: 15.0
+      roadmap_graph_area_width: 5.0
+      roadmap_graph_area_length_scale: 1.0
+      h_signature_prescaler: 0.5
+      h_signature_threshold: 0.1
+      obstacle_heading_threshold: 0.45
+      switching_blocking_period: 0.0
+      viapoints_all_candidates: true
+      delete_detours_backwards: true
+      max_ratio_detours_duration_best_duration: 3.0
+      visualize_hc_graph: false
+      visualize_with_time_as_z_axis_scale: 0.0
+
+      # Recovery
+      shrink_horizon_backup: true
+      shrink_horizon_min_duration: 5.0
+      oscillation_recovery: true
+      oscillation_v_eps: 0.1
+      oscillation_omega_eps: 0.1
+      oscillation_recovery_min_duration: 10.0
+      oscillation_filter_duration: 10.0
+
+planner_server:
+  ros__parameters:
+    use_sim_time: false
+    planner_plugins: [GridBased]
+    GridBased:
+      # TODO: 确认全局规划器插件、容差和 unknown space 策略。
+      plugin: TODO_global_planner_plugin
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      global_frame: TODO_odom_frame
+      robot_base_frame: TODO_base_frame
+      rolling_window: true
+      width: 0.0
+      height: 0.0
+      resolution: 0.05
+      plugins: [obstacle_layer, inflation_layer]
+      obstacle_layer:
+        plugin: nav2_costmap_2d::ObstacleLayer
+        observation_sources: scan
+        scan:
+          topic: TODO_scan_topic
+          data_type: LaserScan
+          marking: true
+          clearing: true
+      inflation_layer:
+        plugin: nav2_costmap_2d::InflationLayer
+        inflation_radius: 0.0
+        cost_scaling_factor: 0.0
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      global_frame: TODO_map_frame
+      robot_base_frame: TODO_base_frame
+      track_unknown_space: true
+      plugins: [static_layer, inflation_layer]
+      static_layer:
+        plugin: nav2_costmap_2d::StaticLayer
+      inflation_layer:
+        plugin: nav2_costmap_2d::InflationLayer
+        inflation_radius: 0.0
+        cost_scaling_factor: 0.0
+
+map_server:
+  ros__parameters:
+    use_sim_time: false
+    # TODO: 由 launch 的 map 参数传入你自己制作的 YAML。
+    yaml_filename: TODO_map.yaml
+
+behavior_server:
+  ros__parameters:
+    # TODO: 补全局部代价地图话题、footprint、恢复行为和速度限制。
+    costmap_topic: TODO_local_costmap
+    footprint_topic: TODO_footprint
+    behavior_plugins: []
+
+velocity_smoother:
+  ros__parameters:
+    # TODO: 解释是否需要速度平滑器，并根据底盘限制填写上下限。
+    smoothing_frequency: 0.0
+    odom_topic: TODO_odom_topic

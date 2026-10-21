@@ -1,0 +1,44 @@
+controller_server:
+  ros__parameters:
+    use_sim_time: false
+    controller_frequency: 15.0
+    min_x_velocity_threshold: 0.01
+    min_theta_velocity_threshold: 0.01
+    controller_plugins: [TEB]
+    TEB:
+      # 具体插件名称和参数以车端安装的 ROS 2 TEB 版本为准。
+      plugin: teb_local_planner::TebLocalPlannerROS
+      max_vel_x: 0.60
+      max_vel_x_backwards: 0.45
+      max_vel_theta: 2.8
+      acc_lim_x: 1.4
+      acc_lim_theta: 3.5
+      min_turning_radius: 0.20
+      allow_init_with_backwards_motion: true
+      weight_kinematics_forward_drive: 100.0
+      # TODO(trainee): 先只改一个参数，记录避障成功率、最小间距和控制周期。
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      global_frame: odom
+      robot_base_frame: base_footprint
+      rolling_window: true
+      width: 4
+      height: 4
+      resolution: 0.05
+      update_frequency: 8.0
+      publish_frequency: 3.0
+      plugins: [obstacle_layer, inflation_layer]
+      obstacle_layer:
+        plugin: nav2_costmap_2d::ObstacleLayer
+        observation_sources: scan
+        scan:
+          topic: /scan
+          data_type: LaserScan
+          marking: true
+          clearing: true
+      inflation_layer:
+        plugin: nav2_costmap_2d::InflationLayer
+        inflation_radius: 0.25
+        cost_scaling_factor: 3.0

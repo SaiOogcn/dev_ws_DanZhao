@@ -1,0 +1,42 @@
+guandao_controller:
+  ros__parameters:
+    path_file: ""
+    odom_topic: /odom_combined
+    vision_topic: /win_detection
+    cmd_vel_topic: /cmd_vel
+    path_frame: odom
+
+    control_frequency: 30.0
+    max_forward_speed: 0.60
+    max_reverse_speed: 0.55
+    max_yaw_rate: 2.50
+    max_acceleration: 2.00
+    max_deceleration: 0.35
+    odom_timeout: 0.50
+    goal_tolerance: 0.12
+
+    min_lookahead: 0.45
+    max_lookahead: 1.05
+    lookahead_speed_gain: 0.50
+    max_reverse_lookahead: 0.45
+    cross_track_slowdown_distance: 0.60
+    direction_switch_tolerance: 0.16
+    direction_switch_speed_threshold: 0.04
+    direction_switch_reaction_time: 0.75
+
+    # HAT policy copied from the proven origincar_control decision structure.
+    image_width: 1920.0
+    image_height: 1080.0
+    image_center_x: 920.0
+    hat_trigger_ratio: 0.22
+    hat_force_trigger_ratio: 0.50
+    hat_stop_ratio: 0.80
+    hat_horizontal_limit: 500.0
+    hat_width_scale: 1.55
+    hat_avoid_target_scale: 1.60
+    hat_direction_bias_px: 180.0
+    hat_kp: 0.002
+    hat_ki: 0.00007
+    hat_kd: 0.00007
+    vision_timeout: 0.35
+    use_vision_when_reversing: false

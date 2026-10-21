@@ -1,0 +1,68 @@
+stages:
+  - build
+  - release
+  - unittest
+
+include:
+  #- local: .gitlab-build-release-nebula100.yml
+  - local: .gitlab-build-release-nebula.yml
+  - local: .gitlab-build-release-stellar400.yml
+  - local: .gitlab-build-release-aurora930.yml
+
+.auto_devops: &auto_devops |
+  function build_deb(){
+    local version=$1
+    local product_name=$2
+    local usage_filename=$3
+    local release_filename=$4
+    local ros_platform_verison=$5
+    local platform=$6
+    
+
+    local sdk_type=$(echo "$product_name" | tr '[:lower:]' '[:upper:]')
+
+    build_directory=/tmp/binarydeb/ros-$ros_platform_verison-$product_name-$version
+    pack_source_directory=/tmp/pack_source/deptrum-ros-driver-$product_name-$version
+    mkdir -p $build_directory $pack_source_directory
+    cp -r ../deptrum-ros-driver/. $build_directory
+    cp -r ../deptrum-ros-driver/. $pack_source_directory
+    rm -rf $pack_source_directory/*.tar.gz $pack_source_directory/*-ros-driver-*
+    cd $build_directory
+    sed -i "s/0.0.0/$version/" package.xml
+    sed -i "s/deptrum-ros-driver/deptrum-ros-driver-$product_name/g" package.xml debian/postinst
+    bloom-generate rosdebian --os-name ubuntu --ros-distro $ros_platform_verison
+    sed -i 's/dh_auto_configure --/dh_auto_configure -- -DSTREAM_SDK_TYPE='"$sdk_type"'/' debian/rules
+
+    if [ "$platform" = "aarch64" ]; then
+      debian/rules binary
+      product_tar_directory=$product_name-ros-driver-$ros_platform_verison-aarch64-$version
+      tar_directory=$CI_PROJECT_DIR/$product_tar_directory
+      mkdir -p $tar_directory
+      cp -r ../ros-$ros_platform_verison-deptrum-ros-driver-$product_name_*_arm64.deb $tar_directory
+      rm ../ros-$ros_platform_verison-deptrum-ros-driver-$product_name_*_arm64.deb
+      cp -r ./docs/$usage_filename $tar_directory
+      cp -r ./$release_filename $tar_directory
+      #pack source
+      cp -r ext $pack_source_directory
+      cd $CI_PROJECT_DIR
+      tar -zcvf $product_name-ros-driver-$ros_platform_verison-aarch64-$version.tar.gz ./$product_tar_directory
+      tar -zcvf deptrum-ros-driver-$product_name-aarch64-$version-source.tar.gz -C /tmp/pack_source deptrum-ros-driver-$product_name-$version
+    else
+      fakeroot debian/rules binary
+      product_tar_directory=$product_name-ros-driver-$ros_platform_verison-x86_64-$version
+      tar_directory=$CI_PROJECT_DIR/$product_tar_directory
+      mkdir -p $tar_directory
+      cp -r ../ros-$ros_platform_verison-deptrum-ros-driver-$product_name_*_amd64.deb $tar_directory
+      rm ../ros-$ros_platform_verison-deptrum-ros-driver-$product_name_*_amd64.deb
+      cp -r ./docs/$usage_filename $tar_directory
+      cp -r ./$release_filename $tar_directory
+      #pack source
+      cp -r ext $pack_source_directory
+      cd $CI_PROJECT_DIR
+      tar -zcvf $product_name-ros-driver-$ros_platform_verison-x86_64-$version.tar.gz ./$product_tar_directory
+      tar -zcvf deptrum-ros-driver-$product_name-x86_64-$version-source.tar.gz -C /tmp/pack_source deptrum-ros-driver-$product_name-$version
+    fi
+  }
+
+before_script:
+  - *auto_devops

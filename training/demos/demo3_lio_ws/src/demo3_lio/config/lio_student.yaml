@@ -1,0 +1,46 @@
+demo3_lio_student:
+  ros__parameters:
+    voxel_size: 0.20
+    keyframe_distance: 0.20
+    scan_min_range: 0.25
+    scan_max_range: 12.0
+    scan_topic: /scan
+    imu_topic: /imu/data
+    odom_topic: /odom
+    estimate_topic: /demo3_lio/odom
+    path_topic: /demo3/path
+    odom_frame: odom
+    base_frame: base_footprint
+    laser_frame: laser
+    # 车端静态 TF 是 base_link -> gyro_link，IMU 系叫 gyro_link，不叫 imu_link。
+    imu_frame: gyro_link
+    # 车端实测外参：base_footprint -> laser = (-0.03, 0.0, 0.23)，yaw 0。
+    # 参考实现 lio_hybird 里的参数名同样是 laser_x/y/yaw，需自己复测。
+    laser_x: -0.03
+    laser_y: 0.0
+    laser_yaw: 0.0
+    # 参考实现还有 scan_index_time_reversed、scan_stamp_is_end、
+    # max_pending_scans 和一组 icp_*/ndt_* 门限，教学骨架不提供。
+    # 束的时间方向和扫描时间戳语义要你从 /scan 的 time_increment 自己判断。
+    # TODO(学员): 完成 TODO 后如果要发布 TF，先确认归属。底盘 EKF 已经发布
+    # odom -> base_footprint，这里再发同一条边，TF 树会出现两个父节点。
+
+demo3_lio_controller:
+  ros__parameters:
+    # 保留执行模式接口；控制器在核心 TODO 完成前只发布零速度。
+    enable_motion: true
+    cmd_vel_topic: /cmd_vel
+    odom_topic: /demo3_lio/odom
+    scan_topic: /scan
+    path_topic: /demo3/path
+    path_file: ''
+    # 起始值仅供参考，按实车尺寸和实测距离调。参考实现 lio_hybird 用的是
+    # control_frequency 30.0、min_lookahead 0.42、max_lookahead 0.95、
+    # max_forward_speed 0.50、goal_tolerance 0.12。
+    lookahead_distance: 0.45
+    linear_speed: 0.20
+    max_angular_z: 1.2
+    goal_tolerance: 0.10
+    obstacle_stop_distance: 0.35
+    obstacle_sector_rad: 0.55
+    control_period_s: 0.05

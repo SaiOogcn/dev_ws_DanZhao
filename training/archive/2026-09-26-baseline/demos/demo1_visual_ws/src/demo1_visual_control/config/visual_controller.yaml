@@ -1,0 +1,9 @@
+visual_controller:
+  ros__parameters:
+    image_center: 920.0
+    line_kp: 0.0016
+    obstacle_trigger_ratio: 0.22
+    max_speed: 0.35
+    obstacle_speed: 0.12
+    max_angular_z: 1.8
+    obstacle_memory_s: 0.35

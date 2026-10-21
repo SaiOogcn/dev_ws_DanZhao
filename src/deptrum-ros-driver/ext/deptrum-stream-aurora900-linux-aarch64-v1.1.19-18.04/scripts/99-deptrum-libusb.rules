@@ -1,0 +1,1 @@
+SUBSYSTEM=="usb", ATTRS{idVendor}=="3251", MODE:="0666", TAG+="uaccess", TAG+="udev-acl"

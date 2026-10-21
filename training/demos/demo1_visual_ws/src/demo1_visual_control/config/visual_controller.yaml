@@ -1,0 +1,27 @@
+demo1_visual_controller:
+  ros__parameters:
+    input_topic: /win_detection
+    cmd_vel_topic: /cmd_vel
+    image_width: 1920.0
+    image_height: 1080.0
+    image_center: 920.0
+    line_confidence_threshold: 0.20
+    line_kp: 0.0016
+    line_ki: 0.0
+    line_kd: 0.0002
+    integral_limit: 300.0
+    derivative_alpha: 0.6
+    obstacle_trigger_ratio: 0.22
+    obstacle_clear_ratio: 0.16
+    obstacle_confirm_frames: 3
+    obstacle_clear_frames: 4
+    max_speed: 0.35
+    obstacle_speed: 0.12
+    lost_hold_speed: 0.08
+    search_angular_z: 0.45
+    max_angular_z: 1.8
+    obstacle_angular_z: 0.55
+    obstacle_memory_s: 0.35
+    lost_hold_s: 0.25
+    lost_search_s: 1.0
+    command_timeout_s: 0.45

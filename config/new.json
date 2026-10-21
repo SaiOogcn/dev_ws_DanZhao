@@ -1,0 +1,13 @@
+{
+	"model_file": "/userdata/dev_ws/src/origincar/pro_03.bin",
+	"task_num": 1,
+	"dnn_Parser": "yolov8",
+	"model_output_count": 6,
+	"reg_max":16,
+	"class_num": 4,
+	"cls_names_list": "/userdata/dev_ws/config/new.list",
+	"strides": [8, 16, 32],
+	"score_threshold": 0.5,
+	"nms_threshold": 0.7,
+	"nms_top_k": 300
+}

@@ -1,0 +1,236 @@
+#!/bin/bash
+set -e
+
+CONFIG="${PUSH_CONFIG:-$HOME/.push_config}"
+CURL_TIMEOUT=30
+SUCCESS_COUNT=0
+FAIL_COUNT=0
+
+read_config_value() {
+  local key="$1"
+  sed -n "s/^${key}=//p" "$CONFIG" | head -n 1 | tr -d '\r'
+}
+
+load_config() {
+  # Do not source this file: team names may legitimately contain spaces.
+  SERVER=$(read_config_value SERVER)
+  USERNAME=$(read_config_value USERNAME)
+  PASSWORD=$(read_config_value PASSWORD)
+  REGION=$(read_config_value REGION)
+  TEAM_NAME=$(read_config_value TEAM_NAME)
+  TOKEN=$(read_config_value TOKEN)
+
+  if [ -z "$SERVER" ] || [ -z "$USERNAME" ] || [ -z "$REGION" ] || [ -z "$TEAM_NAME" ]; then
+    echo "配置文件不完整，请重新执行 install.sh 安装。"
+    exit 1
+  fi
+}
+
+format_error() {
+  local raw="$1"
+  local message="$raw"
+
+  if command -v python3 >/dev/null 2>&1; then
+    message=$(printf '%s' "$raw" | python3 -c '
+import json
+import sys
+
+raw = sys.stdin.read().strip()
+try:
+    data = json.loads(raw)
+except Exception:
+    print(raw)
+    raise SystemExit
+
+def flatten(value):
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        result = []
+        for item in value:
+            result.extend(flatten(item))
+        return result
+    if isinstance(value, dict):
+        result = []
+        for item in value.values():
+            result.extend(flatten(item))
+        return result
+    return [str(value)]
+
+print("；".join(flatten(data)))
+' 2>/dev/null || printf '%s' "$raw")
+  fi
+
+  printf '%s' "$message"
+}
+
+is_filtered_file() {
+  case "${1,,}" in
+    *.urdf|*.pyc|*.pyo|.git|.git/*|*/.git|*/.git/*|__pycache__|__pycache__/*|*/__pycache__|*/__pycache__/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# 子命令处理
+case "$1" in
+  --help|-h)
+    echo "用法: push <文件或文件夹>"
+    echo ""
+    echo "命令:"
+    echo "  push <path>        上传文件或文件夹"
+    echo "  push --config      查看当前配置"
+    echo "  push --version     查看版本"
+    echo "  push --uninstall   卸载工具"
+    exit 0
+    ;;
+  --version)
+    echo "push v1.0.0"
+    exit 0
+    ;;
+  --config)
+    if [ -f "$CONFIG" ]; then
+      load_config
+      echo "区域: $REGION"
+      echo "用户: $USERNAME"
+      echo "队伍: $TEAM_NAME"
+      if [ "$REGION" = "GS" ]; then
+        REGION_DIR="GS"
+      else
+        REGION_DIR=$(printf '%s' "$REGION" | tr '[:upper:]' '[:lower:]')
+      fi
+      echo "存储文件夹: ${REGION_DIR}/${REGION}_${USERNAME}_${REGION}_${TEAM_NAME}"
+    else
+      echo "未安装，请先运行 install.sh"
+    fi
+    exit 0
+    ;;
+  --uninstall)
+    echo "卸载中..."
+    sudo rm -f /usr/local/bin/push
+    rm -f "$CONFIG"
+    echo "已卸载"
+    exit 0
+    ;;
+esac
+
+# 检查安装
+if [ ! -f "$CONFIG" ]; then
+  echo "请先运行 install.sh 安装"
+  exit 1
+fi
+
+load_config
+
+# 刷新 token
+refresh_token() {
+  LOGIN_RESULT=$(curl -sS --connect-timeout "$CURL_TIMEOUT" --max-time 60 --retry 2 --retry-connrefused --retry-delay 1 -X POST "$SERVER/api/auth/login/" \
+    -H "Content-Type: application/json" \
+    -d "{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\",\"region\":\"$REGION\"}" || true)
+
+  if echo "$LOGIN_RESULT" | grep -q '"token"'; then
+    TOKEN=$(echo "$LOGIN_RESULT" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+    sed -i "s/^TOKEN=.*/TOKEN=$TOKEN/" "$CONFIG"
+  else
+    echo "认证失败，请检查配置"
+    [ -n "$LOGIN_RESULT" ] && echo "$LOGIN_RESULT"
+    exit 1
+  fi
+}
+
+# 如果没有 token 则获取
+if [ -z "$TOKEN" ]; then
+  refresh_token
+fi
+
+# 上传单个文件
+upload_file() {
+  local file="$1"
+  local relative_path="${2:-$(basename "$file")}"
+  local auth_retried="${3:-0}"
+  local net_retried="${4:-0}"
+  printf "  %-30s " "$relative_path"
+
+  response=$(curl -sS --connect-timeout "$CURL_TIMEOUT" --max-time 600 -w "\n%{http_code}" -X POST "$SERVER/api/files/" \
+    -H "Authorization: Token $TOKEN" \
+    -F "file=@$file" \
+    -F "relative_path=$relative_path" \
+    -F "upload_version=$UPLOAD_VERSION" || true)
+  status_code=$(printf '%s' "$response" | tail -n 1)
+  result=$(printf '%s' "$response" | sed '$d')
+
+  if [[ "$status_code" =~ ^2[0-9][0-9]$ ]]; then
+    echo "OK"
+    SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+  elif { [ "$status_code" = "401" ] || [ "$status_code" = "403" ] || echo "$result" | grep -qi 'Invalid token\|无效'; } && [ "$auth_retried" = "0" ]; then
+    echo "刷新认证..."
+    refresh_token
+    upload_file "$file" "$relative_path" 1 "$net_retried"
+  elif { [ -z "$status_code" ] || [ "$status_code" = "000" ]; } && [ "$net_retried" -lt 3 ]; then
+    echo "网络波动，正在重试 ($((net_retried + 1))/3)..."
+    sleep 2
+    upload_file "$file" "$relative_path" "$auth_retried" $((net_retried + 1))
+  else
+    echo "NO (HTTP $status_code)"
+    if [ -n "$result" ]; then
+      echo "    $(format_error "$result")"
+    fi
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+  fi
+}
+
+# 主逻辑
+TARGET="$1"
+
+if [ -z "$TARGET" ]; then
+  echo "用法: push <文件或文件夹>"
+  echo "运行 push --help 查看帮助"
+  exit 1
+fi
+
+if [ ! -e "$TARGET" ]; then
+  echo "路径不存在: $TARGET"
+  exit 1
+fi
+
+if [ "$REGION" = "GS" ]; then
+  REGION_DIR="GS"
+else
+  REGION_DIR=$(printf '%s' "$REGION" | tr '[:upper:]' '[:lower:]')
+fi
+FOLDER_NAME="${REGION}_${USERNAME}_${REGION}_${TEAM_NAME}"
+UPLOAD_VERSION=$(date +v%Y%m%d_%H%M%S)
+echo "Push v1.0.0 | $REGION_DIR/$FOLDER_NAME"
+echo "重要提示:"
+echo "  文件上传仅用于第二十一届全国大学生智能汽车竞赛"
+echo "  地瓜机器人智慧医疗赛道赛事管理及赛后仲裁。"
+echo "  该阶段提交内容不作为竞赛评分依据。"
+echo "文件存放在服务器: $REGION_DIR/$FOLDER_NAME/YYYY_MM_DD/$UPLOAD_VERSION/"
+echo "------------------------------"
+
+if [ -f "$TARGET" ]; then
+  if is_filtered_file "$TARGET"; then
+    echo "已自动过滤 URDF 文件，不上传：$(basename "$TARGET")"
+    exit 0
+  fi
+  upload_file "$TARGET" "$(basename "$TARGET")"
+elif [ -d "$TARGET" ]; then
+  TARGET_DIR="${TARGET%/}"
+  BASE_DIR_NAME=$(basename "$TARGET_DIR")
+  count=$(find "$TARGET_DIR" -type d \( -name '.git' -o -name '__pycache__' \) -prune -o -type f ! -iname '*.urdf' ! -iname '*.pyc' ! -iname '*.pyo' -print | wc -l)
+  echo "找到 $count 个文件"
+  while IFS= read -r -d '' f; do
+    rel_inside="${f#"$TARGET_DIR"/}"
+    if [ "$rel_inside" = "$f" ]; then
+      rel_inside=$(basename "$f")
+    fi
+    upload_file "$f" "$BASE_DIR_NAME/$rel_inside"
+  done < <(find "$TARGET_DIR" -type d \( -name '.git' -o -name '__pycache__' \) -prune -o -type f ! -iname '*.urdf' ! -iname '*.pyc' ! -iname '*.pyo' -print0)
+fi
+
+echo "------------------------------"
+echo "成功: $SUCCESS_COUNT 个，失败: $FAIL_COUNT 个"
+if [ "$FAIL_COUNT" -gt 0 ]; then
+  echo "文件上传失败，请根据上方提示处理后重试"
+  exit 1
+fi
+echo "文件上传已完成"

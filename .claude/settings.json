@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la /userdata/dev_ws 2>/dev/null && echo \"---\" && ls -la /home/saioog/remote_dev_ws 2>/dev/null | head -5)",
+      "Read(//userdata/**)",
+      "Bash(ros2 topic *)",
+      "Bash(ros2 node *)",
+      "Bash(ls -la /dev/video* 2>/dev/null)",
+      "Read(//dev/**)"
+    ]
+  }
+}

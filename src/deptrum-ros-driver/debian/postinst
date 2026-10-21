@@ -1,0 +1,53 @@
+#!/bin/sh -e
+
+echo "Setting-up permissions for Deptrum devices"
+
+# select ros version from package name
+package_name="$DPKG_MAINTSCRIPT_PACKAGE"
+selected_ros_version="$(echo "$package_name" | cut -d "-" -f 2)"
+
+if [ -f /opt/ros/${selected_ros_version}/setup.bash ]; then
+    echo "selected_ros_version: ${selected_ros_version}"
+else
+    # select ros version from /opt/ros/
+    ros_versions=`ls -d /opt/ros/*/ | grep -oE '[^/]+/$' | sed 's#/$##'`
+
+    num_versions=`echo "${ros_versions}" | wc -w`
+
+    if [ ${num_versions} -eq 0 ]; then
+        echo "No ROS versions found in /opt/ros/"
+    elif [ ${num_versions} -eq 1 ]; then
+        selected_version="${ros_versions}"
+    else
+        echo "Multiple ROS versions found in /opt/ros/:"
+        echo "Please select a version:"
+        index=1
+        for version in ${ros_versions}; do
+            echo "${index}. ${version}"
+            index=$((index+1))
+        done
+        
+        valid_input=false
+        while [ "$valid_input" = false ]; do
+            read -p "Enter the number corresponding to the desired version: " selected_index
+            if [ "$selected_index" -ge 1 ] && [ "$selected_index" -le "$num_versions" ]; then
+                valid_input=true
+                selected_version=$(echo "${ros_versions}" | awk -v idx="$selected_index" 'NR==idx{print}')
+            else
+                echo "Invalid input. Please enter a valid number."
+            fi
+        done
+    fi
+
+    selected_ros_version=${selected_version}
+    echo "selected_ros_version: ${selected_ros_version}"
+fi
+
+sudo cp /opt/ros/${selected_ros_version}/share/deptrum-ros-driver/99-deptrum-libusb.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules && udevadm trigger
+
+echo "Restarting udev"
+sudo service udev reload
+sudo service udev restart
+
+echo "udev-rules successfully installed"

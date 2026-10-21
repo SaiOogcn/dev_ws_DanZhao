@@ -1,0 +1,4 @@
+// version_nebula.h.in
+#define ROS_MAJOR_VERSION_NEBULA 0
+#define ROS_MINOR_VERSION_NEBULA 2
+#define ROS_REVISION_VERSION_NEBULA 10

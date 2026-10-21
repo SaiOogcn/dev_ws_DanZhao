@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+
+CONFIG="$HOME/.push_gs_config"
+CORE="/usr/local/lib/push-gs/push-core"
+
+if [ "$1" = "--uninstall" ]; then
+  echo "正在卸载国赛提交 SDK..."
+  sudo rm -f /usr/local/bin/push-gs
+  sudo rm -f "$CORE"
+  rmdir /usr/local/lib/push-gs 2>/dev/null || true
+  rm -f "$CONFIG"
+  echo "国赛提交 SDK 已卸载"
+  exit 0
+fi
+
+if [ ! -x "$CORE" ]; then
+  echo "国赛提交 SDK 未正确安装，请重新执行 install.sh。"
+  exit 1
+fi
+
+exec env PUSH_CONFIG="$CONFIG" "$CORE" "$@"

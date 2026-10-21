@@ -1,0 +1,30 @@
+# ROS/CMake build and install output
+build/
+install/
+log/
+devel/
+CMakeFiles/
+CMakeCache.txt
+
+# Compiler and Python cache files
+*.o
+*.obj
+*.d
+*.py[cod]
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+.build/
+dist/
+coverage/
+
+# Local temporary data and recorded bags
+tmp/
+bags/
+*.bag
+*.bag.active
+
+.DS_Store
+Thumbs.db

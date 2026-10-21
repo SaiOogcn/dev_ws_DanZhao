@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>demo3_lio</name>
+  <version>0.1.0</version>
+  <description>二维 LIO 编写与传感器时间、外参和假点处理练习骨架。</description>
+  <maintainer email="team@example.com">team</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>builtin_interfaces</depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

@@ -1,0 +1,409 @@
+build-ubuntu20.04-x86_64-ros2-galactic-nebula:
+  image: 192.168.104.3:32768/ubuntu_ros20.04_galactic:v1
+  stage: build
+  script:
+    # nebula
+    - MAJOR=`cat version_ros_nebula.h | grep MAJOR | cut -d " " -f 3`
+    - MINOR=`cat version_ros_nebula.h | grep MINOR | cut -d " " -f 3`
+    - REVISION=`cat version_ros_nebula.h | grep REVISION | cut -d " " -f 3`
+    - version=$MAJOR.$MINOR.$REVISION
+    - build_deb $version nebula usage_nebula.md RELEASE_NEBULA.md galactic
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: always
+  artifacts:
+    name:  "$CI_COMMIT_REF_NAME"
+    expire_in: 1 week
+    paths:
+      - nebula-ros-driver-galactic-*.tar.gz
+      - deptrum-ros-driver*.tar.gz
+  tags:
+    - linux-x86_64
+
+release-ubuntu20.04-x86_64-ros2-galactic-nebula:
+  image: 192.168.104.3:32768/ubuntu16.04-x86_64:v1
+  stage: release
+  needs: ["build-ubuntu20.04-x86_64-ros2-galactic-nebula"]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: manual
+  script:
+    - curl --upload-file nebula-ros-driver-galactic-*.tar.gz -u $NAS_LOGIN smb://$nas_ip/$release_path/deptrum-ros-driver/release/galactic-x86_64/nebula/
+    - curl --upload-file deptrum-ros-driver-nebula*.tar.gz -u $NAS_LOGIN smb://$nas_ip/$release_path/deptrum-ros-driver/release/galactic-x86_64/nebula/source/
+  tags:
+    - linux-x86_64
+
+
+build-ubuntu20.04-aarch64-ros2-galactic-nebula:
+  image: 192.168.104.3:32768/ubuntu20.04-aarch64-ros-galactic:v2
+  stage: build
+  script:
+    # nebula
+    - MAJOR=`cat version_ros_nebula.h | grep MAJOR | cut -d " " -f 3`
+    - MINOR=`cat version_ros_nebula.h | grep MINOR | cut -d " " -f 3`
+    - REVISION=`cat version_ros_nebula.h | grep REVISION | cut -d " " -f 3`
+    - version=$MAJOR.$MINOR.$REVISION
+    - build_deb $version nebula usage_nebula.md RELEASE_NEBULA.md galactic aarch64
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: always
+  artifacts:
+    name:  "$CI_COMMIT_REF_NAME"
+    expire_in: 1 week
+    paths:
+      - nebula-ros-driver-galactic-*.tar.gz
+      - deptrum-ros-driver*.tar.gz
+  tags:
+    - linux-x86_64
+
+release-ubuntu20.04-aarch64-ros2-galactic-nebula:
+  image: 192.168.104.3:32768/ubuntu16.04-x86_64:v1
+  stage: release
+  needs: ["build-ubuntu20.04-aarch64-ros2-galactic-nebula"]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: manual
+  script:
+    - curl --upload-file nebula-ros-driver-galactic-*.tar.gz -u $NAS_LOGIN smb://$nas_ip/$release_path/deptrum-ros-driver/release/galactic-aarch64/nebula/
+    - curl --upload-file deptrum-ros-driver-nebula*.tar.gz  -u $NAS_LOGIN smb://$nas_ip/$release_path/deptrum-ros-driver/release/galactic-aarch64/nebula/source/
+    
+  tags:
+    - linux-x86_64
+
+build-ubuntu20.04-x86_64-ros2-foxy-nebula:
+  image: 192.168.104.3:32768/ubuntu_ros20.04_foxy:v2
+  stage: build
+  script:
+    # nebula
+    - MAJOR=`cat version_ros_nebula.h | grep MAJOR | cut -d " " -f 3`
+    - MINOR=`cat version_ros_nebula.h | grep MINOR | cut -d " " -f 3`
+    - REVISION=`cat version_ros_nebula.h | grep REVISION | cut -d " " -f 3`
+    - version=$MAJOR.$MINOR.$REVISION
+    - build_deb $version nebula usage_nebula.md RELEASE_NEBULA.md foxy
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: always
+  artifacts:
+    name:  "$CI_COMMIT_REF_NAME"
+    expire_in: 1 week
+    paths:
+      - nebula-ros-driver-foxy-*.tar.gz
+      - deptrum-ros-driver*.tar.gz
+  tags:
+    - linux-x86_64
+
+
+release-ubuntu20.04-x86_64-ros2-foxy-nebula:
+  image: 192.168.104.3:32768/ubuntu16.04-x86_64:v1
+  stage: release
+  needs: ["build-ubuntu20.04-x86_64-ros2-foxy-nebula"]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: manual
+  script:
+    - curl --upload-file nebula-ros-driver-foxy-*.tar.gz -u $NAS_LOGIN smb://$nas_ip/$release_path/deptrum-ros-driver/release/foxy-x86_64/nebula/
+    - curl --upload-file deptrum-ros-driver-nebula*.tar.gz -u $NAS_LOGIN smb://$nas_ip/$release_path/deptrum-ros-driver/release/foxy-x86_64/nebula/source/
+  tags:
+    - linux-x86_64
+
+build-ubuntu20.04-aarch64-ros2-foxy-nebula:
+  image: 192.168.104.3:32768/ubuntu20.04-aarch64-ros2-foxy:v1
+  stage: build
+  script:
+    # nebula
+    - MAJOR=`cat version_ros_nebula.h | grep MAJOR | cut -d " " -f 3`
+    - MINOR=`cat version_ros_nebula.h | grep MINOR | cut -d " " -f 3`
+    - REVISION=`cat version_ros_nebula.h | grep REVISION | cut -d " " -f 3`
+    - version=$MAJOR.$MINOR.$REVISION
+    - build_deb $version nebula usage_nebula.md RELEASE_NEBULA.md foxy aarch64
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: always
+  artifacts:
+    name:  "$CI_COMMIT_REF_NAME"
+    expire_in: 1 week
+    paths:
+      - nebula-ros-driver-foxy-*.tar.gz
+      - deptrum-ros-driver*.tar.gz
+  tags:
+    - linux-x86_64
+
+release-ubuntu20.04-aarch64-ros2-foxy-nebula:
+  image: 192.168.104.3:32768/ubuntu16.04-x86_64:v1
+  stage: release
+  needs: ["build-ubuntu20.04-aarch64-ros2-foxy-nebula"]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: manual
+  script:
+    - curl --upload-file nebula-ros-driver-foxy-*.tar.gz -u $NAS_LOGIN smb://$nas_ip/$release_path/deptrum-ros-driver/release/foxy-aarch64/nebula/
+    - curl --upload-file deptrum-ros-driver-nebula*.tar.gz -u $NAS_LOGIN smb://$nas_ip/$release_path/deptrum-ros-driver/release/foxy-aarch64/nebula/source/
+  tags:
+    - linux-x86_64
+
+build-ubuntu22.04-x86_64-ros2-humble-nebula:
+  image: 192.168.104.3:32768/ubuntu22.04_ros2_humble:v1
+  stage: build
+  script:
+    # nebula
+    - MAJOR=`cat version_ros_nebula.h | grep MAJOR | cut -d " " -f 3`
+    - MINOR=`cat version_ros_nebula.h | grep MINOR | cut -d " " -f 3`
+    - REVISION=`cat version_ros_nebula.h | grep REVISION | cut -d " " -f 3`
+    - version=$MAJOR.$MINOR.$REVISION
+    - build_deb $version nebula usage_nebula.md RELEASE_NEBULA.md humble
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: always
+  artifacts:
+    name:  "$CI_COMMIT_REF_NAME"
+    expire_in: 1 week
+    paths:
+      - nebula-ros-driver-humble-*.tar.gz
+      - deptrum-ros-driver*.tar.gz
+  tags:
+    - linux-x86_64
+
+release-ubuntu22.04-x86_64-ros2-humble-nebula:
+  image: 192.168.104.3:32768/ubuntu16.04-x86_64:v1
+  stage: release
+  needs: ["build-ubuntu22.04-x86_64-ros2-humble-nebula"]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: manual
+  script:
+    - curl --upload-file nebula-ros-driver-humble-*.tar.gz -u $NAS_LOGIN smb://$nas_ip/$release_path/deptrum-ros-driver/release/humble-x86_64/nebula/
+    - curl --upload-file deptrum-ros-driver-nebula*.tar.gz -u $NAS_LOGIN smb://$nas_ip/$release_path/deptrum-ros-driver/release/humble-x86_64/nebula/source/
+  tags:
+    - linux-x86_64
+
+build-ubuntu22.04-aarch64-ros2-humble-nebula:
+  image: 192.168.104.3:32768/ubuntu22.04-aarch64-ros2-humble:v1
+  stage: build
+  script:
+    # nebula
+    - MAJOR=`cat version_ros_nebula.h | grep MAJOR | cut -d " " -f 3`
+    - MINOR=`cat version_ros_nebula.h | grep MINOR | cut -d " " -f 3`
+    - REVISION=`cat version_ros_nebula.h | grep REVISION | cut -d " " -f 3`
+    - version=$MAJOR.$MINOR.$REVISION
+    - build_deb $version nebula usage_nebula.md RELEASE_NEBULA.md humble aarch64
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: always
+  artifacts:
+    name:  "$CI_COMMIT_REF_NAME"
+    expire_in: 1 week
+    paths:
+      - nebula-ros-driver-humble-*.tar.gz
+      - deptrum-ros-driver*.tar.gz
+  tags:
+    - linux-x86_64
+
+release-ubuntu22.04-aarch64-ros2-humble-nebula:
+  image: 192.168.104.3:32768/ubuntu16.04-x86_64:v1
+  stage: release
+  needs: ["build-ubuntu22.04-aarch64-ros2-humble-nebula"]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: manual
+  script:
+    - curl --upload-file nebula-ros-driver-humble-*.tar.gz -u $NAS_LOGIN smb://$nas_ip/$release_path/deptrum-ros-driver/release/humble-aarch64/nebula/
+    - curl --upload-file deptrum-ros-driver-nebula*.tar.gz -u $NAS_LOGIN smb://$nas_ip/$release_path/deptrum-ros-driver/release/humble-aarch64/nebula/source/
+  tags:
+    - linux-x86_64
+
+#nebula-unittest
+test-ubuntu-20.04-x86_64-ros2-nebula-galactic:
+  image: 192.168.104.3:32768/ubuntu_ros20.04_galactic:v1
+  stage: unittest
+  needs: ["build-ubuntu20.04-x86_64-ros2-galactic-nebula"]
+  script:
+    - tar -zxvf nebula-ros-driver-*.tar.gz
+    - rm -rf nebula-ros-driver-*.tar.gz
+    - cd nebula-ros-driver*
+    - dpkg-deb -x ros*.deb .
+    - cp -r ./opt/ros/galactic/lib/* /opt/ros/galactic/lib/
+    - cp -r ./opt/ros/galactic/share/* /opt/ros/galactic/share/
+    - source /opt/ros/galactic/setup.bash
+    - apt update && apt install -y tmux
+    - tmux new-session -d -s my_session 'ros2 launch deptrum-ros-driver-nebula nebula_launch.py slam_mode:=0'
+    - sleep 10
+    - ros2 topic list
+    - rm -rf /tmp/image/
+    - tmux new-session -d -s my_sub 'ros2 launch deptrum-ros-driver-nebula sub_node_ci_nebula_launch.py'
+    - sleep 10
+    - tmux send-keys -t my_sub:0.0 C-c
+    - sleep 2
+    - tmux send-keys -t my_session:0.0 C-c
+    - sleep 2
+    - cat /tmp/deptrum_ros_driver*
+    - cp -r /tmp/image ${CI_PROJECT_DIR}
+    
+  artifacts:
+    name:  "$CI_COMMIT_REF_NAME"
+    expire_in: 1 week
+    paths:
+      - image
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: manual
+  tags:
+    - linux-x86_64-unittest
+
+test-ubuntu-20.04-aarch64-ros2-nebula-galactic:
+  image: 192.168.104.3:32768/ubuntu20.04-aarch64-ros-galactic:v2
+  stage: unittest
+  needs: ["build-ubuntu20.04-aarch64-ros2-galactic-nebula"]
+  script:
+    - tar -zxvf nebula-ros-driver-*.tar.gz
+    - rm -rf nebula-ros-driver-*.tar.gz
+    - cd nebula-ros-driver*
+    - dpkg-deb -x ros*.deb .
+    - source /opt/ros/galactic/setup.bash
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: manual
+  tags:
+    - linux-x86_64-unittest
+
+test-ubuntu-20.04-x86_64-ros2-nebula-foxy:
+  image: 192.168.104.3:32768/ubuntu_ros20.04_foxy:v2
+  stage: unittest
+  needs: ["build-ubuntu20.04-x86_64-ros2-foxy-nebula"]
+  script:
+    - tar -zxvf nebula-ros-driver-*.tar.gz
+    - rm -rf nebula-ros-driver-*.tar.gz
+    - cd nebula-ros-driver*
+    - dpkg-deb -x ros*.deb .
+    - cp -r ./opt/ros/foxy/lib/* /opt/ros/foxy/lib/
+    - cp -r ./opt/ros/foxy/share/* /opt/ros/foxy/share/
+    - source /opt/ros/foxy/setup.bash
+    - apt update && apt install -y tmux
+    - tmux new-session -d -s my_session 'ros2 launch deptrum-ros-driver-nebula nebula_launch.py slam_mode:=0'
+    - sleep 10
+    - ros2 topic list
+    - rm -rf /tmp/image/
+    - tmux new-session -d -s my_sub 'ros2 launch deptrum-ros-driver-nebula sub_node_ci_nebula_launch.py'
+    - sleep 10
+    - tmux send-keys -t my_sub:0.0 C-c
+    - sleep 2
+    - tmux send-keys -t my_session:0.0 C-c
+    - sleep 2
+    - cat /tmp/deptrum_ros_driver*
+    - cp -r /tmp/image ${CI_PROJECT_DIR}
+    
+  artifacts:
+    name:  "$CI_COMMIT_REF_NAME"
+    expire_in: 1 week
+    paths:
+      - image
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: manual
+  tags:
+    - linux-x86_64-unittest
+
+test-ubuntu-20.04-aarch64-ros2-nebula-foxy:
+  image: 192.168.104.3:32768/ubuntu20.04-aarch64-ros2-foxy:v1
+  stage: unittest
+  needs: ["build-ubuntu20.04-aarch64-ros2-foxy-nebula"]
+  script:
+    - tar -zxvf nebula-ros-driver-*.tar.gz
+    - rm -rf nebula-ros-driver-*.tar.gz
+    - cd nebula-ros-driver*
+    - dpkg-deb -x ros*.deb .
+    - source /opt/ros/foxy/setup.bash
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: manual
+  tags:
+    - linux-x86_64-unittest
+
+test-ubuntu-22.04-x86_64-ros2-nebula-humble:
+  image: 192.168.104.3:32768/ubuntu22.04_ros2_humble:v1
+  stage: unittest
+  needs: ["build-ubuntu22.04-x86_64-ros2-humble-nebula"]
+  script:
+    - tar -zxvf nebula-ros-driver-*.tar.gz
+    - rm -rf nebula-ros-driver-*.tar.gz
+    - cd nebula-ros-driver*
+    - dpkg-deb -x ros*.deb .
+    - cp -r ./opt/ros/humble/lib/* /opt/ros/humble/lib/
+    - cp -r ./opt/ros/humble/share/* /opt/ros/humble/share/
+    - source /opt/ros/humble/setup.bash
+    - apt update && apt install -y tmux
+    - tmux new-session -d -s my_session 'ros2 launch deptrum-ros-driver-nebula nebula_launch.py slam_mode:=0'
+    - sleep 10
+    - ros2 topic list
+    - rm -rf /tmp/image/
+    - tmux new-session -d -s my_sub 'ros2 launch deptrum-ros-driver-nebula sub_node_ci_nebula_launch.py'
+    - sleep 10
+    - tmux send-keys -t my_sub:0.0 C-c
+    - sleep 2
+    - tmux send-keys -t my_session:0.0 C-c
+    - sleep 2
+    - cat /tmp/deptrum_ros_driver*
+    - cp -r /tmp/image ${CI_PROJECT_DIR}
+    
+  artifacts:
+    name:  "$CI_COMMIT_REF_NAME"
+    expire_in: 1 week
+    paths:
+      - image
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: manual
+  tags:
+    - linux-x86_64-unittest
+
+test-ubuntu-22.04-aarch64-ros2-nebula-humble:
+  image: 192.168.104.3:32768/ubuntu22.04-aarch64-ros2-humble:v1
+  stage: unittest
+  needs: ["build-ubuntu22.04-aarch64-ros2-humble-nebula"]
+  script:
+    - tar -zxvf nebula-ros-driver-*.tar.gz
+    - rm -rf nebula-ros-driver-*.tar.gz
+    - cd nebula-ros-driver*
+    - dpkg-deb -x ros*.deb .
+    - source /opt/ros/humble/setup.bash
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+      - version_ros_nebula.h
+      when: manual
+  tags:
+    - linux-x86_64-unittest
+

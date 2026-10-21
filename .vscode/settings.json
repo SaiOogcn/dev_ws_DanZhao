@@ -1,0 +1,4 @@
+{
+    "git.ignoreLimitWarning": true,
+    "cmake.sourceDirectory": "/userdata/dev_ws/src/origincar/cmd_vel_publisher"
+}

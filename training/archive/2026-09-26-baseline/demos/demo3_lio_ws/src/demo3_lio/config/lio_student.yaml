@@ -1,0 +1,12 @@
+demo3_lio_student:
+  ros__parameters:
+    voxel_size: 0.20
+    keyframe_distance: 0.20
+    max_range: 8.0
+    laser_frame: laser
+    imu_frame: imu_link
+    base_frame: base_footprint
+    # TODO(trainee): 用实测标定值替换雷达到 IMU 的二维外参。
+    t_il_x: -0.03
+    t_il_y: 0.0
+    t_il_yaw: 0.0

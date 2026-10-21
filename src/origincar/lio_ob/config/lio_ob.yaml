@@ -1,0 +1,495 @@
+submap_lio:
+  ros__parameters:
+    # Actual vehicle topics: Madgwick yaw/gyro at about 20 Hz, wheel speed at
+    # about 20 Hz and LSN10 LaserScan at about 10 Hz.
+    imu_topic: /imu/data
+    wheel_odom_topic: /odom
+    scan_topic: /scan
+    odom_topic: /lio_ob/odom
+    odom_frame: lio_ob_odom
+    base_frame: base_footprint
+    # base_orin's EKF already publishes odom -> base_footprint. Publishing a
+    # second parent here would make the TF tree ambiguous. The controller uses
+    # /lio_ob/odom directly and does not require this transform.
+    publish_tf: false
+    # Publish the complementary lio_ob_odom->odom bridge for diagnostics.
+    publish_odom_bridge_tf: true
+    wheel_odom_frame: odom
+
+    # A one-shot absolute-y registration is accepted on the straight bottom
+    # edge of the ring. Both the filter state and lidar ICP anchor are shifted.
+    enable_ring_y_correction: true
+    ring_y_correction_topic: /lio_ob/ring_y_correction
+    ring_y_correction_gain: 0.90
+    ring_y_correction_max_innovation: 0.35
+    ring_y_correction_min_std: 0.015
+    ring_y_correction_max_std: 0.10
+
+    # Competition field frame: bottom-left origin, +x right, +y up.
+    initial_x: 0.54
+    initial_y: 0.30
+    initial_yaw: 0.0
+
+    # Live TF on 2026-07-27: base_footprint -> laser = (-0.03, 0.0, 0.23), yaw 0.
+    laser_x: -0.03
+    laser_y: 0.0
+    laser_yaw: 0.0
+
+    deskew_scan: true
+    # LSN10 acquires clockwise. The driver publishes ranges in increasing ROS
+    # angle, so acquisition time runs from the last array element to index 0.
+    scan_index_time_reversed: true
+    # The current driver stamps /scan when the completed revolution is
+    # published, rather than at the first element in ranges[].
+    scan_stamp_is_end: true
+    scan_stamp_offset: 0.0
+    motion_buffer_duration: 2.0
+    # At the nominal 20 Hz input rate a 0.12 s limit tolerates one delayed
+    # sample, but rejects interpolation across the observed 0.20-0.45 s gaps.
+    motion_max_sample_gap: 0.12
+    # Never let scan matching build a long queue. A current dead-reckoned pose
+    # is safer for control than a more accurate correction delivered 0.8 s late.
+    max_pending_scans: 2
+    scan_min_range: 0.25
+    scan_max_range: 12.0
+    scan_stride: 4
+
+    icp_max_iterations: 8
+    icp_max_correspondence: 0.35
+    icp_normal_max_gap: 0.30
+    icp_huber_delta: 0.08
+    icp_min_correspondences: 30
+    icp_max_rmse: 0.10
+    icp_translation_convergence: 0.0001
+    icp_rotation_convergence: 0.0001
+    icp_max_translation_jump: 0.20
+    icp_max_rotation_jump: 0.35
+    # In the square-wall field, ICP may slide along a wall. It may refine the
+    # wheel/gyro prediction but must not replace it with another wall match.
+    icp_max_prediction_translation_error: 0.10
+    icp_max_prediction_rotation_error: 0.10
+
+    # Keyframe NDT submap. This is the 2D adaptation of the supplied
+    # ESKF/IESKF-LIO configuration. ICP above is used only while the NDT map is
+    # bootstrapping or when a map update is rejected.
+    keyframe_distance: 0.20
+    keyframe_angle_deg: 30.0
+    submap_max_keyframes: 50
+    ndt_max_iterations: 20
+    # 0.65 m from the reference configuration is too coarse for a 0.30 m car
+    # and cone-sized obstacles in this 5 m field.
+    ndt_voxel_size: 0.20
+    ndt_min_effective_points: 10
+    ndt_min_points_per_voxel: 3
+    ndt_max_points_per_voxel: 50
+    ndt_outlier_threshold: 5.991
+    ndt_voxel_capacity: 10000
+    ndt_regularization: 0.001
+    ndt_prior_information: 1000.0
+    ndt_information_ratio: 0.01
+    ndt_convergence_epsilon: 0.001
+    # 0=center voxel, 1=four-neighbourhood, 2=eight-neighbourhood.
+    ndt_nearby_type: 2
+    ndt_max_translation_correction: 0.25
+    ndt_max_rotation_correction: 0.20
+
+    # Published as /lio_ob/submap for RViz diagnosis.
+    occupancy_pixels_per_meter: 20.0
+    occupancy_image_size: 200
+    occupancy_origin_x: -2.5
+    occupancy_origin_y: -2.5
+    # RViz history is diagnostic only. Spatial downsampling and a 5 Hz publish
+    # cap prevent an ever-growing Path from consuming CPU, DDS and bag bandwidth.
+    path_publish_period: 0.20
+    path_pose_min_distance: 0.01
+    path_pose_min_angle: 0.01
+    path_max_poses: 2000
+    static_motion_velocity_threshold: 0.03
+    static_motion_gyro_threshold: 0.01
+
+    # Preserve real elapsed time in state propagation. Sparse intervals are
+    # rejected for lidar deskew instead of silently losing most of the yaw.
+    imu_min_dt: 0.01
+    imu_max_dt: 0.15
+    imu_integration_step: 0.05
+    stationary_bias_alpha: 0.05
+    # Madgwick is configured with use_mag=false, so its yaw is derived from the
+    # same gyro integrated below and is not an independent heading observation.
+    # Fusing it again double-counts the gyro and collapses yaw covariance while
+    # the stationary heading still drifts. Keep /imu/data as the input topic,
+    # but use its angular velocity; NDT supplies the independent yaw correction.
+    use_imu_orientation: false
+    imu_yaw_std: 0.03
+
+    # Initial values. Validate these from stationary and repeated-path bags.
+    gyro_noise_std: 0.003
+    gyro_bias_walk_std: 0.0002
+    velocity_walk_std: 0.20
+    wheel_velocity_std: 0.06
+    lidar_position_std: 0.04
+    # The persistent NDT submap is less prone to the old scan-to-scan ICP yaw
+    # walk. Give it enough weight to correct gyro drift without accepting one
+    # scan as an absolute heading measurement.
+    lidar_yaw_std: 0.05
+
+lio_ob_controller:
+  ros__parameters:
+    odom_topic: /lio_ob/odom
+    scan_topic: /scan
+    vision_topic: /win_detection
+    # Direct chassis output. In external mode this node stays silent before QR;
+    # standalone origincar_control owns /cmd_vel during the first stage.
+    cmd_vel_topic: /cmd_vel
+    path_frame: lio_ob_odom
+    # LIO and recorded paths already share the anchored 5 m field frame.
+    align_path_to_start: false
+    # Two-stage race mission. /sign_switch sign_data=3 selects clockwise and
+    # sign_data=4 selects counterclockwise. The launch defaults to reverse_ring,
+    # so only the route family (normal, inner, or full reverse) must be chosen.
+    # On detection the controller stops and switches to the selected route from
+    # (4.20, 1.50, 30.2 deg) into the center corridor.
+    enable_qr_mission: true
+    qr_sprint_path_file: ""
+    qr_clockwise_path_file: ""
+    qr_counterclockwise_path_file: ""
+    qr_sign_topic: /sign_switch
+    # Ignore a transient-local result left over at startup. A real QR cannot
+    # be reached during this short arming interval from the field start.
+    qr_detection_arm_delay: 0.50
+    qr_switch_stop_speed: 0.04
+    qr_switch_max_brake_time: 2.0
+    # "external" keeps this controller silent before QR while standalone
+    # origincar_control owns the first line by publishing /cmd_vel directly.
+    first_line_mode: external
+    control_started_topic: /origincar_control/started
+    control_released_topic: /origincar_control/control_released
+    visual_first_line_cmd_topic: /lio_ob/visual_first_line_cmd
+    visual_first_line_cmd_timeout: 0.30
+    # The built-in pure pursuit and lidar/vision local avoidance own every
+    # post-QR route segment, including the entry corridor and ring.
+    # Keep this false; it is only an explicit field-test escape hatch.
+    qr_allow_keepout: false
+    # One-based point range of the upper closed ring. The offset remains zero
+    # normally and can be overridden from launch for field-map A/B tests.
+    ring_path_start_point: 78
+    ring_path_end_point: 159
+    ring_path_y_offset: 0.0
+    ring_path_blend_points: 4
+
+    # Take exactly one ring photo on the upper straight before the third turn.
+    # Points are one-based indices in the selected post-QR path. Forward ring
+    # travel uses the front YOLO camera; full-reverse ring travel uses Aurora.
+    enable_ring_photo_trigger: true
+    ring_photo_trigger_topic: /take_photo/trigger
+    ring_photo_forward_path_point: 125
+    ring_photo_reverse_path_point: 124
+    # Prefer a straight, low-blur sample. Force the shot after this many path
+    # points so a noisy yaw-rate estimate cannot suppress it indefinitely.
+    ring_photo_max_abs_yaw_rate: 0.25
+    ring_photo_force_after_points: 5
+
+    # 1024 pixels represent the full 5 m x 5 m competition field.
+    # The launch file fills keepout_mask_file from the installed package share.
+    use_keepout_mask: true
+    keepout_mask_file: ""
+    keepout_resolution: 0.0048828125
+    keepout_origin_x: 0.0
+    keepout_origin_y: 0.0
+    keepout_origin_yaw: 0.0
+    keepout_white_threshold: 128
+    max_path_mask_violation_ratio: 0.10
+
+    control_frequency: 30.0
+    # At 0.60 m/s this gives about 0.75 m forward lookahead. The previous
+    # profile gave only 0.67 m and reacted late after localization/actuator lag.
+    min_lookahead: 0.25 #0.45
+    max_lookahead: 0.45 #1.05
+    lookahead_speed_gain: 0.50
+
+    # These are chassis limits. The controller computes a lower feasible speed
+    # from curvature, lateral acceleration and remaining braking distance.
+    # Validation profile. The original controller reached 0.90 m/s, but the
+    # measured 0.75 s actuator delay must be compensated before restoring it.
+    max_forward_speed: 0.50 #0.70
+    max_reverse_speed: 0.62 #0.65
+    # After QR handoff and before entering the ring channel/ring boundary.
+    # Restore normal speed limits when the selected post-QR route reaches this map Y.
+    post_qr_transition_forward_speed: 0.28 #0.28
+    post_qr_transition_reverse_speed: 0.28 #0.28
+    post_qr_transition_end_y: 1.90
+    # Disabled by default; launch supplies the reverse-entry candidate files when enabled.
+    auto_select_post_qr_route: false
+    auto_route_obstacle_influence_radius: 0.55
+    max_yaw_rate: 2.50
+    max_lateral_acceleration: 2.20
+    max_acceleration: 2.00
+    # 2026-07-28 bag: a 0.5 m/s stop took about 1.5 s. Use the measured
+    # chassis capability, not the ideal command slew rate.
+    max_deceleration: 0.35
+    goal_tolerance: 0.12
+    # Begin reducing speed before a large tracking error becomes unrecoverable.
+    cross_track_slowdown_distance: 0.60
+    # 0.35 m was too short for 0.55 m/s reverse tracking and encouraged
+    # late left-right corrections. Keep it shorter than the forward lookahead.
+    max_reverse_lookahead: 0.45 #0.45
+    direction_switch_tolerance: 0.16
+    direction_switch_speed_threshold: 0.04
+    # cmd angular velocity -> IMU response was about 0.74 s in the same bag.
+    direction_switch_reaction_time: 0.75
+    allow_early_reverse_completion: true
+    early_reverse_completion_distance: 0.45
+
+    # The first field run showed occasional 0.25-0.45 s LIO delivery gaps.
+    # Keep the fail-safe, but do not brake on a single delayed ICP update.
+    odom_timeout: 0.50
+    max_odom_message_age: 0.30
+    scan_timeout: 0.30
+    require_fresh_scan: true
+    # Keep true for competition. Disable only for an isolated direction test.
+    enable_obstacle_avoidance: true
+
+    laser_x: -0.03
+    laser_y: 0.0
+    laser_yaw: 0.0
+    robot_half_length: 0.1375
+    robot_half_width: 0.0925
+    obstacle_corridor_margin: 0.08
+    obstacle_min_trigger_distance: 0.45 #0.20 
+    obstacle_max_trigger_distance: 2.20
+    obstacle_reaction_time: 0.75
+    obstacle_stop_clearance: 0.02 #0.10
+    # Avoidance is clamped by the direction speed limit; state the actual cap
+    # explicitly instead of relying on the old 0.90 m/s value being clipped.
+    obstacle_avoid_speed: 0.45 #0.60
+    obstacle_avoid_yaw_rate: 1.80
+    obstacle_min_avoid_duration: 0.70
+    obstacle_clear_duration: 0.40
+    # Lightweight DWA-style recovery shared by lidar/vision avoidance failure
+    # and a keepout-constrained tracking failure. The controller first brakes,
+    # samples reverse curvature rollouts, locks one rollout, then settles and
+    # replans forward. At most two attempts are allowed until 0.30 m progress.
+    enable_reverse_escape: true
+    reverse_escape_speed: 0.18 #0.18
+    reverse_escape_distance: 0.28 #0.38
+    reverse_escape_max_duration: 4.0
+    reverse_escape_max_curvature: 3.0 #3.0
+    reverse_escape_curvature_samples: 21
+    reverse_escape_max_attempts: 99
+    reverse_escape_path_half_width: 1.00
+    reverse_escape_stop_speed: 0.04
+    reverse_escape_reset_progress: 0.30
+    # Measured command-to-IMU response delay; start braking before the rollout
+    # endpoint instead of waiting until the estimated pose reaches it.
+    reverse_escape_reaction_time: 0.75
+    reverse_escape_settle_time: 0.20
+    # Side-rear obstacle strategy for reverse driving:
+    # right-rear cone -> one right-forward clearance move -> left-rear/straight reverse arc.
+    # A left-rear cone uses the mirrored manoeuvre. Disable for original hybrid behavior.
+    enable_reverse_side_rear_maneuver: true
+    reverse_side_rear_min_rearward: 0.02
+    reverse_side_rear_min_lateral: 0.06
+    reverse_side_rear_max_lateral: 0.60
+    reverse_side_rear_forward_distance: 0.30
+    reverse_side_rear_forward_min_curvature: 0.60
+    deskew_obstacle_scan: true
+    scan_index_time_reversed: true
+
+    # A residual margin remains after constant-twist LaserScan deskewing.
+    scan_distortion_margin: 0.01 #0.01
+
+    # Grid-free local trajectory sampler. The narrow corridor approximates the
+    # normal white driving region around the recording. The wider corridor is
+    # opened only if every narrow-corridor candidate collides.
+    # Spatial rollout, in metres. At 0.18 m/s this used to be interpreted as
+    # 1.2 seconds and saw only 0.216 m ahead, which could not clear a cone.
+    local_plan_horizon: 1.80 #1.80
+    local_plan_step_distance: 0.05
+    # First 40% turns away, middle 20% holds, final 40% returns toward the path.
+    local_plan_turn_fraction: 0.40
+    local_plan_curvature_samples: 15 #15
+    # Do not trade race speed for another geometrically identical rollout.
+    local_plan_speed_samples: 1
+    max_curvature: 3.5 #3.5
+    preferred_path_half_width: 0.32
+    emergency_path_half_width: 1.05
+    local_path_window: 2.5
+    progress_search_window: 0.75
+    # Normal tracking must remain white; only avoidance may use black.
+    # Look farther through the keepout mask at the 0.60 m/s validation speed.
+    nominal_mask_check_distance: 0.60
+
+    # The ideal competition path enters the upper ring at point 72 and leaves
+    # it after point 160. In this section camera lane geometry is an independent
+    # local reference when accumulated LIO drift disagrees with the mask.
+    enable_ring_vision: true
+    ring_binary_topic: /image_yellow_binary
+    ring_start_path_point: 55 #72
+    ring_end_path_point: 160
+    # Ignore ring-exterior lidar returns unless they enter this distance from
+    # the recorded ring centerline. This prevents outer cones/walls steering
+    # the vehicle away from the ring lane.
+    enable_ring_obstacle_path_filter: true
+    ring_obstacle_path_half_width: 0.30
+    ring_vision_timeout: 0.25
+    ring_vision_min_confidence: 0.35
+    ring_image_threshold: 127
+    ring_image_row_step: 8
+    ring_image_scan_rows: 240
+    ring_image_min_valid_rows: 10
+    ring_image_min_run_width: 20
+    ring_image_max_run_width_ratio: 0.85
+    ring_image_lookahead_px: 180.0
+
+    # Points 72-77 are the curved transition from the vertical entrance. Point
+    # 78 is already almost horizontal; require |cos(yaw)| >= 0.90 so image
+    # lateral offset is a well-conditioned observation of world-y error.
+    enable_ring_localization_correction: true
+    ring_localization_correction_topic: /lio_ob/ring_y_correction
+    ring_localization_start_path_point: 55 #78
+    ring_localization_end_path_point: 70 #86
+    # Measured from the 5 m semantic mask: the lower ring white band is about
+    # 0.50 m wide. RGBD uses it to recover a missing one-sided boundary.
+    ring_localization_lane_width: 0.50
+    # Aurora RGBD is the authoritative metric observation. The monocular
+    # estimator is disabled by require_depth and remains only as an explicit
+    # diagnostic fallback. The 0.55 optical-center ratio comes from the
+    # supplied centered 640x400 field sample.
+    ring_localization_use_depth: true
+    ring_localization_require_depth: true
+    ring_depth_topic: /aurora/depth/image_raw
+    ring_camera_info_topic: /aurora/rgb/camera_info
+    ring_depth_sync_tolerance: 0.12
+    ring_depth_scale: 0.001
+    ring_depth_min_range: 0.20
+    ring_depth_max_range: 4.0
+    ring_depth_search_radius: 3
+    ring_depth_min_center_points: 6
+    ring_depth_min_forward_span: 0.35
+    ring_depth_max_lane_width_error: 0.18
+    ring_depth_max_fit_rmse: 0.06
+    # Camera ground projection relative to base_footprint. The photo shows it
+    # close to the chassis center; measure these two values for final accuracy.
+    ring_camera_x: 0.0
+    ring_camera_y: 0.0
+    ring_localization_camera_center_x_ratio: 0.55
+    ring_localization_min_y_observability: 0.90
+    ring_localization_vehicle_row_ratio: 0.96
+    ring_localization_min_row_ratio: 0.52
+    ring_localization_horizon_row_ratio: 0.25
+    ring_localization_min_lane_width_px: 80.0
+    # Zero learns projected width from frames where both boundaries are visible.
+    ring_localization_expected_width_px: 0.0
+    ring_localization_max_fit_rmse_ratio: 0.10
+    # Reject the yellow-base/black-grid forbidden patch: unlike a lane band,
+    # its projected interior is repeatedly interrupted by dark grid lines.
+    ring_localization_min_solid_fraction: 0.78
+    ring_localization_max_heading_error: 0.40
+    ring_localization_sample_count: 5
+    ring_localization_max_sample_spread: 0.05
+    ring_localization_measurement_std: 0.025
+    ring_localization_max_correction: 0.35
+
+    # Black is still strict outside the ring. Inside it, a fresh visual track
+    # may cross black at reduced speed; without vision, a recovery candidate
+    # must reduce the forbidden footprint fraction and remain near the path.
+    ring_recovery_speed: 0.28
+    ring_recovery_horizon: 0.65
+    ring_recovery_path_half_width: 0.55
+    ring_recovery_min_mask_improvement: 0.05
+    ring_field_boundary_margin: 0.05
+    obstacle_safety_margin: 0.11 #0.05
+    # Static cones and walls remain in a short local SE(2) memory after they
+    # enter the LSN10 blind sector. Points are voxelized to bound CPU use.
+    # One second bridges the rear blind sector without preserving pose-error
+    # trails long enough to block a race-speed manoeuvre.
+    # Keep approximately the same spatial trail as the old 0.50 m/s profile:
+    # 0.60 m/s * 0.80 s = 0.48 m. A full second would retain 0.60 m and can
+    # unnecessarily block a fast return manoeuvre after passing a cone.
+    obstacle_memory_duration: 0.20
+    obstacle_memory_radius: 2.5
+    obstacle_memory_voxel_size: 0.08 #0.08
+    # Reject sparse optical/thermal returns before they enter collision checking.
+    # A real cone produces adjacent beams and remains at a stable world position.
+    enable_lidar_noise_filter: true
+    scan_cluster_max_beam_gap: 2
+    scan_cluster_max_distance: 0.16
+    scan_cluster_min_points: 3
+    obstacle_confirmation_hits: 2
+    obstacle_confirmation_window: 0.30
+    obstacle_confirmation_radius: 0.10 #0.14
+    unconfirmed_obstacle_ttl: 0.35
+    # Prefer scans recorded at low vehicle speed when updating a persistent
+    # obstacle's world position. At/above 0.35 m/s, new distorted measurements
+    # move the stored point by only 20%; at rest they contribute 75%.
+    enable_speed_weighted_obstacle_memory: true
+    obstacle_low_speed_threshold: 0.35
+    obstacle_high_speed_measurement_weight: 0.20
+    obstacle_stopped_measurement_weight: 0.75
+
+    # Competition-specific wall rejection. The skewed outer paper-wall returns
+    # are not random obstacles; the metric field boundary and mask constrain them.
+    filter_field_boundary_returns: true
+    field_min_x: 0.0
+    field_max_x: 5.0
+    field_min_y: 0.0
+    field_max_y: 5.0
+    field_boundary_filter_band: 0.20
+    # Competition walls form long, thin scan clusters; cones remain compact.
+    # Wall points are excluded only from local collision checking, not from LIO.
+    filter_wall_line_clusters: true
+    wall_cluster_min_points: 8
+    wall_cluster_min_length: 0.45
+    wall_cluster_max_thickness: 0.07
+    wall_cluster_min_linearity: 0.97
+
+    weight_path_distance: 50.0 #18.0
+    weight_path_heading: 2.0
+    weight_path_return: 24.0
+    weight_black_area: 10.0 #80.0
+    weight_obstacle_clearance: 0.9
+    weight_steering_change: 0.8
+    weight_preferred_side: 10.0
+    weight_progress: 7.0
+    weight_speed: 8.0
+    weight_visual_command: 24.0
+
+    # Values extracted from origincar_control's current HAT policy.
+    image_width: 1920.0
+    image_height: 1080.0
+    image_center_x: 920.0
+    hat_trigger_ratio: 0.22
+    hat_force_trigger_ratio: 0.50
+    hat_horizontal_limit: 500.0
+    hat_width_scale: 1.55
+    hat_avoid_target_scale: 1.60
+    hat_direction_bias_px: 180.0
+    hat_kp: 0.002
+    hat_ki: 0.00007
+    hat_kd: 0.00007
+    vision_timeout: 0.35
+    use_vision_when_reversing: false
+
+    # Terminal visual parking, adapted from second_line's P-target controller.
+    # The path remains responsible until Euclidean distance to its end is <= 2.0 m.
+    # Whenever a clear P
+    # target is visible on the final forward segment, visual control takes over.
+    enable_visual_parking: true
+    visual_parking_only_post_qr: true
+    parking_target_type: "P"
+    parking_arm_distance: 2.00
+    parking_min_confidence: 0.96
+    parking_detection_timeout: 0.35
+    # Reject P while a HAT box overlaps P horizontally, matching second_line.
+    parking_obstacle_margin_px: 150.0
+    # second_line uses the geometric center of the 1920-pixel image for P.
+    parking_center_x: 980.0
+    parking_decel_start_y: 500.0
+    parking_trigger_y: 1030.0
+    parking_stop_y: 1080.0
+    # second_line requests 0.80 m/s, but the controller clamps this to the
+    # configured max_forward_speed (currently 0.50 m/s).
+    parking_max_speed: 0.50
+    parking_kp: 0.0025
+    parking_kd: 0.0010
+    parking_final_crawl_speed: 0.36
+    parking_final_crawl_duration: 0.45
