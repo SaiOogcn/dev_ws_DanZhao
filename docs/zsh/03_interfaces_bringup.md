@@ -2,7 +2,7 @@
 
 [返回总说明](../../README.md)
 
-本文命令供现场操作者使用，本次文档整理没有启动、编译或驱动车辆。启动底盘和控制节点可能进入运动流程，先核对当前运行节点及控制阶段。
+本文命令供现场操作者使用。新增算法包为 [zsh_navigation](../../src/zsh_navigation/README.md)，源码整理期间未在小车构建或驱动车辆。
 
 ## 1. 当前接口契约
 
@@ -45,7 +45,7 @@
 
 原始订阅仍需核对 `/scan`、`/imu/data` 和 `/robotvel`；命名空间不一定会改变源码中的绝对话题。纯 LO 模式不订阅后两者。
 
-建议最终增加独立定位适配层，输出规范化的位姿、速度、时间戳、协方差、定位质量、地图版本和重定位状态。**此为待实现接口，不要直接运行不存在的节点或话题。**
+新增 `zsh_navigation` 已提供 Odometry/指定 TF 边的选择、坐标转换、时间插值及轮速接入；它不修改定位器本身。定位质量、地图版本、重定位成功和协方差的统一协议仍需扩展，不能用当前时效检查替代全部定位质量判定。
 
 ## 3. TF 所有权与参考点
 
@@ -142,7 +142,18 @@ ros2 launch zsh_pkg ndt_lio_node.launch.py
 
 ### 需要重新编译时
 
-本次只改文档，无需编译。未来若修改 `lio_hybird`，只由用户在**小车本机**执行以下示例，先确认所需依赖已安装：
+新增 MPC 包由用户在**小车本机**定向构建并安装，默认仅预览：
+
+```bash
+cd /userdata/dev_ws
+colcon build --packages-select zsh_navigation --symlink-install
+source install/local_setup.bash
+ros2 launch zsh_navigation navigation.launch.py
+```
+
+默认读取 `/lio_hybird/odom`、`/odom`、`/scan`，输出 `/zsh_navigation/candidate_cmd_vel`、`/zsh_navigation/status` 和路径。`/zsh_navigation/enable` 为 SetBool 服务。真实底盘输出需明确配置并完成标定，详见 [包说明](../../src/zsh_navigation/README.md)。
+
+若修改 `lio_hybird`，只由用户在**小车本机**执行以下示例，先确认所需依赖已安装：
 
 ```bash
 cd /userdata/dev_ws
@@ -150,7 +161,7 @@ colcon build --packages-select lio_hybird --symlink-install
 source install/local_setup.bash
 ```
 
-若变更自定义消息，则先确定受影响依赖再选择包构建。新控制器若放入既有 `zsh_pkg`，必须先将入口、依赖和安装规则真正加入该包，再定向构建；本文没有添加可直接执行的新 MPC 构建命令。
+若变更自定义消息，则先确定受影响依赖再选择包构建。新控制器使用独立的 `zsh_navigation` 包，不覆盖小车既有 `zsh_pkg` 的 CMake 或入口。
 
 禁止在 SSHFS 挂载目录运行构建，禁止清理其他人的构建产物。遵守根目录 [AGENTS.md](../../AGENTS.md)。
 

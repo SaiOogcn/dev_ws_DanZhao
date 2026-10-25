@@ -42,15 +42,15 @@
 
 ## 当前实现与部署状态
 
-当前分支提供二维定位与路径控制源码，并给出 NdtLIO 和 CEM-MPC 的完整接入方案。各部分的代码交付与实车部署状态如下：
+当前分支同时提供二维定位与路径控制源码，以及独立的 [zsh_navigation 算法包](src/zsh_navigation/README.md)。新包包含全赛段任务状态机、Frenet 多锥桶通道规划、航向格点搜索、锥桶轮廓处理、CEM-MPC 和真实 ROS 话题接入，未包含仿真场景。源码交付与实车验收分别说明如下：
 
 | 部分 | 当前状态 | 使用边界 |
 | --- | --- | --- |
 | 本仓库 `lio_hybird` | 已有二维 NDT-EKF、Pure Pursuit、局部避障和任务交接源码 | 当前可用的路径控制实现；CEM-MPC 需按文档接入 |
-| 小车 `zsh_pkg` 的 NdtLIO 试运行 | 独立代码，提供 `test_ros2_lio`、`process_imu` 两个入口；未随本次文档交付 | 试运行配置 `with_imu: 0` 为纯雷达 LO；IMU 融合需单独启用与验证 |
-| 新的多锥桶规划与 CEM-MPC 方法 | 本文完整说明算法、接口和实车迁移步骤 | 仍需将对应算法接入实车包，并完成标定、重定位和闭环验收；本分支没有新增 MPC 可执行节点 |
+| 小车 `zsh_pkg` 的 NdtLIO 试运行 | 独立代码，提供 `test_ros2_lio`、`process_imu` 两个入口；本次未复制其定位核心 | 试运行配置 `with_imu: 0` 为纯雷达 LO；IMU 融合需单独启用与验证 |
+| `zsh_navigation` 多锥桶规划与 CEM-MPC | 已交付算法源码、ROS 节点、启动配置、路线和离线回归检查 | 安装入口为 `full_race_navigation` 与 `audit_course`；默认预览，实车标定、定位接线和闭环验收待现场完成 |
 
-定位模式、控制器和启动入口应配套使用。当前路径控制为 Pure Pursuit；历史说明中的 TEB 与本文的 CEM-MPC 对应不同实现，部署时按实际安装的节点和参数确认。
+定位模式、控制器和启动入口应配套使用。`lio_hybird` 的路径控制为 Pure Pursuit，`zsh_navigation` 的路径控制为 CEM-MPC；历史说明中的 TEB 对应其他实现，部署时按实际安装的节点和参数确认。
 
 ## 总体实现路径
 
@@ -72,7 +72,7 @@ flowchart TD
     L --> A
 ```
 
-上图是目标系统。当前仓库对应控制位置的是 `pure_pursuit_node`；迁移 MPC 时必须完成控制器替换或接入统一仲裁，不能让两个控制器同时给底盘发速度。
+上图包含完整系统的接入目标。当前 `zsh_navigation` 已实现导航与控制部分；NdtLIO 地图持久化、重定位及定位质量协议仍需补齐。`pure_pursuit_node` 与新 MPC 是两种控制入口，接底盘时选择一个或接入统一仲裁。
 
 ### 1. 传感器与底盘
 
@@ -97,7 +97,7 @@ flowchart TD
 
 ### 4. 比赛任务和路线
 
-路线按任务拆段，每段包含路径、行驶方向、速度上限、入口条件和退出条件。方法层面的完整流程如下；名称用于说明状态机，不能当作本仓库已经安装的 ROS 节点：
+路线按任务拆段，每段包含路径、行驶方向、速度上限、入口条件和退出条件。以下对应 `race_course.py` 和 `RaceMission` 中的导航赛段；二维码和图生文仍作为独立任务扩展：
 
 ```mermaid
 flowchart LR
@@ -135,7 +135,19 @@ flowchart LR
 
 ## 当前实车启动入口
 
-这些是现有 `lio_hybird` 路线，不是新 MPC 的启动命令。仅在确认底盘、传感器、坐标和控制权正确后，由现场操作者执行；节点运行可能进入车辆运动流程。
+新算法源码位于 [src/zsh_navigation](src/zsh_navigation/README.md)。由用户在小车本机安装后启动预览：
+
+```bash
+cd /userdata/dev_ws
+colcon build --packages-select zsh_navigation --symlink-install
+source install/local_setup.bash
+ros2 run zsh_navigation audit_course
+ros2 launch zsh_navigation navigation.launch.py direction:=CW
+```
+
+默认 `publish_drive=false`，不向底盘话题发布命令；收到有效定位、轮速和雷达后，通过 `/zsh_navigation/enable` 服务启用预览计算。配置、前提和实车输出方法见 [包使用说明](src/zsh_navigation/README.md)。本次未在小车执行构建或运动测试。
+
+以下保留现有 `lio_hybird` 入口，供使用 Pure Pursuit 版本时选择。不要让它与新 MPC 同时给底盘发速度：
 
 ```bash
 cd /userdata/dev_ws
@@ -147,7 +159,7 @@ ros2 launch lio_hybird lio_hybird.launch.py \
 
 如采用二维码前视觉控制，再另开终端运行 `ros2 run origincar_control origincar_control`。该程序有键盘启动流程；先确认环境和当前控制阶段。现有交接使用 `/sign_switch` 和 `/origincar_control/control_released`，接管前检查实际轮速，不能只按固定延时切换。
 
-需要编译时遵守 [AGENTS.md](AGENTS.md)：**只能由用户在小车本机 `/userdata/dev_ws` 执行，不能在 SSHFS 挂载目录或本地副本编译。** 仅选择改动包及确有必要的依赖，不重编整个工作空间，不删除其他人的 `build/`、`install/`、`log/`。本次只改文档，无需编译。
+需要编译时遵守 [AGENTS.md](AGENTS.md)：**只能由用户在小车本机 `/userdata/dev_ws` 执行，不能在 SSHFS 挂载目录或本地副本编译。** 仅选择改动包及确有必要的依赖，不重编整个工作空间，不删除其他人的 `build/`、`install/`、`log/`。
 
 ## 方法的优势及成立条件
 
@@ -164,6 +176,8 @@ ros2 launch lio_hybird lio_hybird.launch.py \
 这些是设计收益，不是已经测出的实车精度或完赛时间。本次不宣称已完成 20 秒实车完赛，也不以节点在线、话题有频率或地图可见替代闭环验收。
 
 ## 文档与源码导航
+
+算法源码与实际运行入口：[zsh_navigation](src/zsh_navigation/README.md)。
 
 1. [NdtLIO、二维 NDT-EKF、地图持久化和重定位](docs/zsh/01_ndtlio_mapping_localization.md)
 2. [任务状态机、局部规划、多锥桶避障、CEM-MPC](docs/zsh/02_mission_planning_mpc.md)

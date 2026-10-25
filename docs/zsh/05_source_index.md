@@ -2,7 +2,7 @@
 
 [返回总说明](../../README.md)
 
-本次提交为 README 和技术文档整理。下面明确区分本分支已有源码、独立小车试运行源码，以及需要实车移植的算法模块；未新增仿真文件，也没有通过文档凭空增加节点。
+本分支已包含技术文档及 [zsh_navigation 算法包](../../src/zsh_navigation/README.md)。下面区分已有定位/控制代码、独立小车 NdtLIO 试运行，以及本次实际交付的导航与 MPC 源码；未新增仿真文件。
 
 ## 1. 本分支已有代码
 
@@ -50,23 +50,24 @@ src/zsh_pkg/
 
 ## 3. 新规划与 MPC 的模块对应关系
 
-下表给出被整理方法的模块职责及实车接入位置。模块名用于识别算法来源和组织迁移，**这些文件没有随本次文档添加到本分支，也没有对应新 `ros2 run` 入口**。不应把下表当作现有目录清单。
+下表对应已提交的 `src/zsh_navigation/zsh_navigation/` 文件。`setup.py` 安装 `full_race_navigation` 与 `audit_course` 入口，`launch/navigation.launch.py` 提供默认预览启动。包安装后才能通过 `ros2 run` / `ros2 launch` 调用。
 
 | 算法模块名 | 完整职责 | 实车需要接入的内容 |
 | --- | --- | --- |
-| `pose_source.py` | 选择定位输入、时间插值、场地对齐、传感器偏移 | NdtLIO/二维 NDT 输出适配、质量门控、真实 TF |
-| `race_course.py` | 赛段、路线、方向、边界和任务语义 | 本车场地坐标、实际赛规和停车目标 |
-| `obstacle_cloud.py` | 扫描累积、聚类、锥桶轮廓、保守回退 | 雷达时序、锥桶尺寸、定位误差与真实视野 |
-| `frenet_corridor.py` | 多障碍侧向偏移、航向连续、汇合验证 | 车体/后轴参考点、场地边界、侧别保持 |
-| `hybrid_corridor.py` | 航向格点、车辆原语、解析连接、倒车末段 | 轴距、转角上限、全车碰撞与计算预算 |
-| `race_mpc.py` | 转向动态预测、CEM 优化、速度与碰撞约束 | 执行器辨识、实时预算、底盘单位与饱和 |
-| `race_navigation.py` | 后台规划、预规划、版本和结果有效性管理 | 独立进程生命周期、地图/定位重置、任务事件 |
-| `full_race_navigation.py` | ROS 主接入与任务执行编排 | 实际传感器、命令唯一出口、超时状态、安装入口 |
+| [pose_source.py](../../src/zsh_navigation/zsh_navigation/pose_source.py) | 时间插值、场地对齐、传感器偏移 | NdtLIO/二维 NDT 输出坐标核验 |
+| [race_course.py](../../src/zsh_navigation/zsh_navigation/race_course.py) | 赛段、路线、方向、边界和任务语义 | 本车场地坐标、实际赛规和停车目标 |
+| [obstacle_cloud.py](../../src/zsh_navigation/zsh_navigation/obstacle_cloud.py) | 聚类、锥桶轮廓、保守回退 | 锥桶尺寸、定位误差与真实视野 |
+| [frenet_corridor.py](../../src/zsh_navigation/zsh_navigation/frenet_corridor.py) | 多障碍侧向偏移、航向连续、汇合验证 | 车体/后轴参考点、场地边界、侧别保持 |
+| [hybrid_corridor.py](../../src/zsh_navigation/zsh_navigation/hybrid_corridor.py) | 航向格点、车辆原语、解析连接、倒车末段 | 轴距、转角上限、全车碰撞与计算预算 |
+| [race_mpc.py](../../src/zsh_navigation/zsh_navigation/race_mpc.py) | 转向动态预测、CEM 优化、速度与碰撞约束 | 执行器辨识、实时预算、底盘单位与饱和 |
+| [race_navigation.py](../../src/zsh_navigation/zsh_navigation/race_navigation.py) | 后台规划、预规划、障碍更新后路线复验 | 独立进程生命周期、地图/定位重置、任务事件 |
+| [full_race_navigation.py](../../src/zsh_navigation/zsh_navigation/full_race_navigation.py) | ROS 输入、启停服务、状态与命令输出 | 本车标定、唯一控制权和底盘超时机制 |
+| [sensor_pipeline.py](../../src/zsh_navigation/zsh_navigation/sensor_pipeline.py) | 逐束投影、时效检查、有界障碍记忆 | 扫描时序、外参和实际计算预算 |
 
-移植时先抽离依赖环境的适配代码，保留可独立回放的算法核心；不能仅改话题名称就当作实车移植完成。具体顺序见 [迁移验收](04_validation_migration.md)。
+算法核心可脱离 ROS 导入，真实话题适配与其分开；未携带 Gazebo 场景、模型或插件。实车部署仍需标定、接线和验收，不能仅改话题名称就声称已经完成。具体顺序见 [迁移验收](04_validation_migration.md)。
 
 ## 4. 阅读顺序与交付边界
 
 先读根 README 了解完整链路，再按 [定位](01_ndtlio_mapping_localization.md) → [规划控制](02_mission_planning_mpc.md) → [接口](03_interfaces_bringup.md) → [验收](04_validation_migration.md) 阅读。遇到“当前实现”和“建议实现”冲突，以实际源码、安装入口和已验证运行记录为准。
 
-本次提交仅增加说明文档：没有复制仿真、没有覆盖底盘或定位源码、没有清理构建产物。后续若交付完整 MPC 实车包，应另行提交对应源码、安装规则、标定参数和真实验收记录，并更新这里的状态表。
+本次新增导航算法源码、ROS 安装规则、配置、路线与离线检查；没有复制仿真、覆盖底盘或定位源码，也没有清理构建产物。当前不提供已经完成本车标定或闭环验收的结论，后续应补充真实参数与运行记录。

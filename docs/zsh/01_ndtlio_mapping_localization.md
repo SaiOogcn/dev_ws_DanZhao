@@ -6,7 +6,7 @@
 
 | 项目 | 独立 NdtLIO 试运行 | 本仓库 `lio_hybird` |
 | --- | --- | --- |
-| 位置 | 之前小车 `zsh_pkg/origincar_trial/src/NdtLIO`，本次不随文档上传 | [src/origincar/lio_hybird](../../src/origincar/lio_hybird) |
+| 位置 | 小车 `zsh_pkg/origincar_trial/src/NdtLIO`，未包含在新增导航包内 | [src/origincar/lio_hybird](../../src/origincar/lio_hybird) |
 | 入口 | 父包安装 `test_ros2_lio`、`process_imu` | `submap_lio_node`、`pure_pursuit_node` |
 | 估计方式 | `with_imu=0` LO，1 ESKF，2 IESKF | 二维 NDT-EKF，ICP 用于初始化或匹配失败后备 |
 | 轮速类型 | `/robotvel`，`origincar_msg/msg/Data` | `/odom`，`nav_msgs/msg/Odometry`，取纵向速度 |

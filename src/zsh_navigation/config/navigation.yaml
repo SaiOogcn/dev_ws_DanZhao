@@ -1,0 +1,50 @@
+zsh_navigation:
+  ros__parameters:
+    direction: CW
+    profile: sprint
+    # Preview only. No publisher is created on /cmd_vel in this mode.
+    publish_drive: false
+    hardware_calibrated: false
+    command_topic: /cmd_vel
+    pose_topic: /lio_hybird/odom
+    pose_frame: lio_hybird_odom
+    pose_child_frame: base_footprint
+    # Optional alternative: consume one explicitly named TF edge.
+    pose_tf_topic: ""
+    pose_tf_child: base
+    motion_topic: /odom
+    motion_child_frame: base_footprint
+    scan_topic: /scan
+    scan_frame: laser
+    field_frame: field
+    field_offset: [0.0, 0.0, 0.0]
+    body_to_pose_sensor: [0.0, 0.0, 0.0]
+    laser_in_body: [-0.03, 0.0, 0.0]
+    scan_stamp_is_end: true
+    scan_index_time_reversed: true
+    pose_max_age: 0.30
+    motion_max_age: 0.30
+    scan_max_age: 0.40
+    interpolation_max_gap: 0.20
+    scan_max_range: 3.0
+    observation_lifetime: 2.0
+    observation_maximum: 1200
+    cone_section_radius: 0.030
+    cone_base_half_width: 0.11
+    fallback_inflation: 0.14
+    maximum_speed: 0.30
+    maximum_lateral_acceleration: 0.50
+    braking: 0.60
+    steering_rate: 1.5
+    steering_acceleration: 5.0
+    # These initial model values are not a calibration of your physical car.
+    forward_gain: 0.896
+    forward_damping: 20.90
+    forward_frequency2: 176.84
+    reverse_gain: 1.180
+    reverse_damping: 3.29
+    reverse_frequency2: 16.42
+    speed_time_constant: 0.16
+    speed_acceleration: 1.6
+    maximum_control_seconds: 0.15
+    maximum_duration: 300.0
